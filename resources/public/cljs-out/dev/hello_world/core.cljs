@@ -10,7 +10,6 @@
 ;; which can sometimes be useful.
 (enable-console-print!)
 
-
 ;;;;  AJAX, or asynchronous javascript XmlHttpRequest
 ;;;;  or making our SPA's "live".
 
@@ -23,6 +22,7 @@
   (let [r (<! (http/get "http://localhost:9500/api/random"))]
     (reset! resp r)))
 
+
 #_
 resp
 (declare dispatch-event!)
@@ -33,6 +33,21 @@ resp
     (let [resp (<! (http/get "http://localhost:9500/api/random"))]
       ;; Ignore error handling for the moment
       (dispatch-event! {:type :reset :number (get-in resp [:body :lucky-number])}))))
+
+(defonce typed-word (reagent/atom ""))
+(defonce the-word-list (reagent/atom []))
+
+(defn fetch-remote-data2 []
+  (go
+    (if (empty? @typed-word)
+      (js/alert "no word supplied")
+      (let [req-str (str "http://localhost:9500/api/" @typed-word "/add-word")
+            resp (<! (http/get req-str))]
+        (println @typed-word)
+        
+      ;; Ignore error handling for the moment
+        (dispatch-event! {:type :reset-words :words (get-in resp [:body :word-list])})))))
+
 
 #_
 (fetch-remote-data)
@@ -67,18 +82,99 @@ resp
 (defn dispatch-event! [e]
   (condp = (:type e)
     :fetch       (fetch-remote-data)
+    :fetch-words (fetch-remote-data2)
     :reset       (reset! the-counter (:number e))
+    :reset-words (do
+                   (reset! the-word-list (:words e))
+                   (reset! typed-word ""))
+    :print-word  (println @typed-word)
     (println "Don't know how to handle event: " e)))
 
+
+;; helper function
+
+(defn add-letter
+  [letter]
+  (reset! typed-word (str @typed-word letter)))
+
+(defn rem-letter
+  []
+  (let [popped-word  @typed-word]
+    (print (.substring (java.lang.String. @typed-word) 0 (- (count str) 1)))
+    (print popped-word)
+    (reset! typed-word popped-word)))
+
+(defn clear-input
+  []
+  (reset! typed-word ""))
+
+(def letter-list
+  ["A"
+    "D"
+    "G"
+    "L"
+    "N"
+    "R"
+    "U"])
 
 ;; Now we can add an event handler with SEMANTIC meaning to our component:
 (defn simple-button []
   [:div
    [:center
-    [:h1 "Timer component"]
-    [:input {:type :button :class :button :value "Push me!"
-             :on-click #(dispatch-event! {:type :fetch})}]
-    [:div#the-text @the-counter]]])
+    [:h1 "Spelling Bee"]
+    [:input {:type :text :class :text :value @typed-word
+             :on-change #(reset! typed-word (-> % .-target .-value))
+             ;:on-key-down #(dispatch-event! {:type :fetch})
+             }]
+    ;[:div#the-text @the-word-list]
+    ]
+   [:div
+    [:center
+     [:input {:type :button :class :button2 :value (nth letter-list 1) 
+              :on-click #(add-letter (-> % .-target .-value))
+              }]
+     [:input {:type :button :class :button2 :value (nth letter-list 2)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]
+     ]]
+    [:div
+     [:center
+     [:input {:type :button :class :button2 :value (nth letter-list 3)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]
+      ;; The middle letter
+      [:input {:type :button :class :button3 :value (first letter-list)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]
+      [:input {:type :button :class :button2 :value (nth letter-list 4)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]]]
+   [:div
+     [:center
+     
+     [:input {:type :button :class :button2 :value (nth letter-list 5)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]
+     [:input {:type :button :class :button2 :value (nth letter-list 6)
+              :on-click #(add-letter (-> % .-target .-value))
+              }]]]
+  [:div
+   [:center
+    [:input {:type :button :class :button4 :value "clear all"
+             ;:on-click #(dispatch-event! {:type :fetch})
+             :on-click #(clear-input)}]
+    [:input {:type :button :class :button :value "enter"
+             ;:on-click #(dispatch-event! {:type :fetch})
+             :on-click #(dispatch-event! {:type :fetch-words})
+             }]
+    ]]
+   [:div
+   [:center
+    [:h1 (str "You have found " (count (apply sorted-set @the-word-list)) " words")]
+    [:ul
+     [:li 
+      (for [item (apply sorted-set @the-word-list)]
+        ^{:key item} [:li item])]]]]])
 
 
 ;; This is the basic idea behind RE-FRAME, which we'll see next time.

@@ -645,8 +645,8 @@ return (new cljs.tools.reader.reader_types.StringReader(s,cljs.core.count.call(n
  * Creates a PushbackReader from a given string
  */
 cljs.tools.reader.reader_types.string_push_back_reader = (function cljs$tools$reader$reader_types$string_push_back_reader(var_args){
-var G__10864 = arguments.length;
-switch (G__10864) {
+var G__11020 = arguments.length;
+switch (G__11020) {
 case 1:
 return cljs.tools.reader.reader_types.string_push_back_reader.cljs$core$IFn$_invoke$arity$1((arguments[(0)]));
 
@@ -678,8 +678,8 @@ return (new cljs.tools.reader.reader_types.PushbackReader((new cljs.tools.reader
  * Creates an IndexingPushbackReader from a given string or PushbackReader
  */
 cljs.tools.reader.reader_types.indexing_push_back_reader = (function cljs$tools$reader$reader_types$indexing_push_back_reader(var_args){
-var G__10867 = arguments.length;
-switch (G__10867) {
+var G__11023 = arguments.length;
+switch (G__11023) {
 case 1:
 return cljs.tools.reader.reader_types.indexing_push_back_reader.cljs$core$IFn$_invoke$arity$1((arguments[(0)]));
 
@@ -716,8 +716,8 @@ cljs.tools.reader.reader_types.indexing_push_back_reader.cljs$lang$maxFixedArity
  * Creates a SourceLoggingPushbackReader from a given string or PushbackReader
  */
 cljs.tools.reader.reader_types.source_logging_push_back_reader = (function cljs$tools$reader$reader_types$source_logging_push_back_reader(var_args){
-var G__10870 = arguments.length;
-switch (G__10870) {
+var G__11026 = arguments.length;
+switch (G__11026) {
 case 1:
 return cljs.tools.reader.reader_types.source_logging_push_back_reader.cljs$core$IFn$_invoke$arity$1((arguments[(0)]));
 
@@ -760,10 +760,10 @@ while(true){
 if(cljs.tools.reader.impl.utils.newline_QMARK_.call(null,c)){
 return cljs.core.str.cljs$core$IFn$_invoke$arity$1(s);
 } else {
-var G__10872 = cljs.tools.reader.reader_types.read_char.call(null,rdr);
-var G__10873 = s.append(c);
-c = G__10872;
-s = G__10873;
+var G__11028 = cljs.tools.reader.reader_types.read_char.call(null,rdr);
+var G__11029 = s.append(c);
+c = G__11028;
+s = G__11029;
 continue;
 }
 break;

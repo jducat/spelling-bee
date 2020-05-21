@@ -1,27 +1,68 @@
 /* some style */
 
 html {
-    font-family : sans;
+  font-family : sans;
 }
 
 body {
-    background-color : #efe;
+  background-color : #efe;
 }
 
 .button {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 150%;
-  margin: 2em;
-  cursor: pointer;
+background-color: #4CAF50;
+border: none;
+color: white;
+padding: 15px 32px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 150%;
+margin: 2em;
+cursor: pointer;
+}
+
+.button2 {
+background-color: #CCFFFF;
+border: 1px solid black;
+color: black;
+border-radius: 8px;
+padding: 10px 20px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 150%;
+margin: 2em;
+cursor: pointer;
+}
+
+.button3 {
+background-color: pink;
+border:1px solid green;
+border-radius: 8px;
+color: black;
+padding: 10px 20px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 150%;
+margin: 2em;
+cursor: pointer;
+}
+
+.button4 {
+background-color: #FF9900;
+border: none;
+color: white;
+padding: 15px 32px;
+text-align: center;
+text-decoration: none;
+display: inline-block;
+font-size: 150%;
+margin: 2em;
+cursor: pointer;
 }
 
 #the-text {
- font-size: 150%;
- color: blue;
+font-size: 150%;
+color: blue;
 }
