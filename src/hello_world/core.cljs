@@ -4,7 +4,8 @@
    [goog.dom :as gdom]
    [reagent.core :as reagent :refer [atom]]
    [cljs.core.async :refer [<! >! chan timeout]]
-   [cljs-http.client :as http]))
+   [cljs-http.client :as http]
+   [clojure.string :as str]))
 
 ;; This command will cause our printlns to also show up in the console's log,
 ;; which can sometimes be useful.
@@ -99,9 +100,7 @@ resp
 
 (defn rem-letter
   []
-  (let [popped-word  @typed-word]
-    (print (.substring (java.lang.String. @typed-word) 0 (- (count str) 1)))
-    (print popped-word)
+  (let [popped-word  (reduce str (take (- (count @typed-word) 1) @typed-word))]
     (reset! typed-word popped-word)))
 
 (defn clear-input
@@ -123,58 +122,51 @@ resp
    [:center
     [:h1 "Spelling Bee"]
     [:input {:type :text :class :text :value @typed-word
-             :on-change #(reset! typed-word (-> % .-target .-value))
+             :on-change #(reset! typed-word (str/upper-case (-> % .-target .-value)))
              ;:on-key-down #(dispatch-event! {:type :fetch})
              }]
     ;[:div#the-text @the-word-list]
     ]
    [:div
     [:center
-     [:input {:type :button :class :button2 :value (nth letter-list 1) 
-              :on-click #(add-letter (-> % .-target .-value))
-              }]
+     [:input {:type :button :class :button2 :value (nth letter-list 1)
+              :on-click #(add-letter (-> % .-target .-value))}]
      [:input {:type :button :class :button2 :value (nth letter-list 2)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]
-     ]]
-    [:div
-     [:center
+              :on-click #(add-letter (-> % .-target .-value))}]]]
+   [:div
+    [:center
      [:input {:type :button :class :button2 :value (nth letter-list 3)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]
+              :on-click #(add-letter (-> % .-target .-value))}]
       ;; The middle letter
-      [:input {:type :button :class :button3 :value (first letter-list)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]
-      [:input {:type :button :class :button2 :value (nth letter-list 4)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]]]
+     [:input {:type :button :class :button3 :value (first letter-list)
+              :on-click #(add-letter (-> % .-target .-value))}]
+     [:input {:type :button :class :button2 :value (nth letter-list 4)
+              :on-click #(add-letter (-> % .-target .-value))}]]]
    [:div
-     [:center
-     
+    [:center
+
      [:input {:type :button :class :button2 :value (nth letter-list 5)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]
+              :on-click #(add-letter (-> % .-target .-value))}]
      [:input {:type :button :class :button2 :value (nth letter-list 6)
-              :on-click #(add-letter (-> % .-target .-value))
-              }]]]
-  [:div
-   [:center
-    [:input {:type :button :class :button4 :value "clear all"
-             ;:on-click #(dispatch-event! {:type :fetch})
-             :on-click #(clear-input)}]
-    [:input {:type :button :class :button :value "enter"
-             ;:on-click #(dispatch-event! {:type :fetch})
-             :on-click #(dispatch-event! {:type :fetch-words})
-             }]
-    ]]
+              :on-click #(add-letter (-> % .-target .-value))}]]]
    [:div
-   [:center
-    [:h1 (str "You have found " (count (apply sorted-set @the-word-list)) " words")]
-    [:ul
-     [:li 
-      (for [item (apply sorted-set @the-word-list)]
-        ^{:key item} [:li item])]]]]])
+    [:center
+     [:input {:type :button :class :button4 :value "refresh"
+             ;:on-click #(dispatch-event! {:type :fetch})
+              :on-click #(clear-input)}]
+     [:input {:type :button :class :button4 :value "backspace"
+             ;:on-click #(dispatch-event! {:type :fetch})
+              :on-click #(rem-letter)}]
+     [:input {:type :button :class :button :value "enter"
+             ;:on-click #(dispatch-event! {:type :fetch})
+              :on-click #(dispatch-event! {:type :fetch-words})}]]]
+   [:div ;{:class :column}
+    [:center
+     [:h1 (str "You have found " (count (apply sorted-set @the-word-list)) " words")]
+     [:ul
+      [:li
+       (for [item (apply sorted-set @the-word-list)]
+         ^{:key item} [:li item])]]]]])
 
 
 ;; This is the basic idea behind RE-FRAME, which we'll see next time.
