@@ -1,9 +1,7 @@
 (ns ^:figwheel-hooks hello-world.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require
-   #_[goog.dom :as gdom]
-   #_[reagent.core :as reagent :refer [atom]]
-   [cljs.core.async :refer [<! >! chan timeout]]
+   #_[cljs.core.async :refer [<! >! chan timeout]]
    [cljs-http.client :as http]
    [clojure.string :as str]
    [re-frame.core :as rf]
@@ -11,6 +9,14 @@
    [day8.re-frame.http-fx]
    [ajax.core :as ajax]
    [clojure.edn]))
+
+
+;; To-do's
+;; 
+;; shuffle words
+;; play multiple games
+;; slider
+;; 
 
 ;; This command will cause our printlns to also show up in the console's log,
 ;; which can sometimes be useful.
@@ -25,52 +31,38 @@
    "R"
    "U"])
 
-(defonce event-channel (chan 10))
+(defn word-score
+  [word]
+  (let [count-word (count word)]
+    (if (= count-word 4)
+      4
+      (if (= 7 count-word) 14 count-word))))
 
-(defn send-event! [e]
-  (go (>! event-channel e)))
+(defn calc-points
+  [word-list]
+  (map word-score word-list))
 
-#_(defn fetch-remote-data []
-    (if (empty? @(rf/subscribe [:typed-word]))
-      (js/alert (str "word supplied:" @(rf/subscribe [:typed-word])))
-      (let [req-str (str "http://localhost:8280/api/" @(rf/subscribe [:typed-word]) "/add-word")
-            resp (http/get req-str)]
-        (js/alert (str req-str " ----  " resp))
-        (js/alert @(rf/subscribe [:typed-word]))
+;; Scoring rules
+;;Words must contain at least 4 letters.
+;;Words must include the center letter.
+;;Letters can be used more than once.
+;;4-letter words are worth 1 point each.
+;;Longer words earn 1 point per letter.
+;;Each puzzle includes at least one “pangram” which uses every letter. These are worth 7 extra points!
 
-      ;; Ignore error handling for the moment
-        #(rf/dispatch [:fetch-words (get-in resp [:body :word-list])]))))
 
-(defn fetch-remote-data []
-  (print "in the fetch remote data")
-  (go
-    (if (empty? @(rf/subscribe [:typed-word]))
-      (js/alert (str "word supplied:" @(rf/subscribe [:typed-word])))
-      (let [req-str (str "http://localhost:9500/api/" @(rf/subscribe [:typed-word]) "/add-word")
-            resp (<! (http/get req-str))]
-        ;(js/alert (str req-str " ----  " resp))
-        ;(js/alert @(rf/subscribe [:typed-word]))
 
-        (print "in the fetch remote data in go")
-        (print (get-in resp [:body :word-list]))
-      ;; Ignore error handling for the moment
-        #(rf/dispatch [:process-fetched-words (get-in resp [:body :word-list])])))))
+#_(def shuffle-list
+  (let [mid-letter (first letter-list)
+        bod (rest letter-list)]
+    (map into ([] mid-letter (first bod) (rest bod)))))
+
+;(js/alert shuffle-list)
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
-#_(defn dispatch-timer-event
-    []
-    (let [now (js/Date.)]
-      (rf/dispatch [:timer now])))  ;; <-- dispatch used
-
-;; Call the dispatching function every second.
-;; `defonce` is like `def` but it ensures only one instance is ever
-;; created in the face of figwheel hot-reloading of this file.
-#_(defonce do-timer (js/setInterval dispatch-timer-event 1000))
-
-
-
-(defn dispatch-add-letter
+;; all event dispatch occurs from user input
+#_(defn dispatch-add-letter
   []
   (rf/dispatch [:add-letter "blank"]))
 
@@ -104,7 +96,6 @@
 (rf/reg-event-db
  :typed-word-change
  (fn [db [_ new-word]]
-   ;(js/alert (:typed-word db))
    (assoc db :typed-word new-word)))
 
 (rf/reg-event-db
@@ -124,73 +115,21 @@
    (let [popped-word  (reduce str (take (- (count new-letter) 1) new-letter))]
      (assoc db :typed-word popped-word))))
 
-(rf/reg-event-db
- :fetch-words
- (fn [db [_ new-word]]
-   (print "called :fetch-words")
-   (let [curr-words (:the-word-list db)
-         all-words (conj curr-words new-word)]
-     (print "called :fetch-words")
-     (print curr-words all-words)
-     (assoc db :the-word-list all-words :typed-word ""))))
-
-(rf/reg-event-db
- :process-fetched-words
- (fn [db [_ new-word]]
-   (print "in the :process-fetched-words")
-   (assoc db :typed-word "WORKED")))
-  
-(rf/reg-event-db
- :remote-call
- (fn [db [_ word]]
-   (print "run :remote-call on:" word)
-   (print "in the fetch remote data")
-   (go
-     (if (empty? @(rf/subscribe [:typed-word]))
-       (js/alert (str "word supplied:" @(rf/subscribe [:typed-word])))
-       (let [req-str (str "http://localhost:9500/api/" @(rf/subscribe [:typed-word]) "/add-word")
-             resp (<! (http/get req-str))]
-        ;(js/alert (str req-str " ----  " resp))
-        ;(js/alert @(rf/subscribe [:typed-word]))
-         
-         (print "in the remote-call in go")
-         (print (get-in resp [:body :word-list]))
-      ;; Ignore error handling for the moment
-         #(rf/dispatch [:process-fetched-words (get-in resp [:body :word-list])])
-         (print "in the remote-call in go after rf/disp")
-         ;(assoc db :typed-word "Test")
-         )))
-   (assoc db :typed-word word)))
-   
-   #_(fetch-remote-data)
-   #_(let [req-str (str "http://localhost:9500/api/" word "/add-word")
-        curr-word (:typed-word db)
-         resp (http/get
-          req-str
-          {:serv-handler       #(rf/dispatch [:process-response %1])   ;; <2> further dispatch !!
-           :serv-error-handler #(rf/dispatch [:bad-response %1])})]
-        (print "output: "(get-in resp [:body :word-list]))
-       
-       #(rf/dispatch [:process-response "test"])
-       
-       (assoc db :typed-word curr-word))
-   ;(assoc db :typed-word word)))
-
 (rf/reg-event-fx        ;; <-- note the `-fx` extension
  :request-it        ;; <-- the event id
  (fn                ;; <-- the handler function
    [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db 
-   (print "in requet-it: " word)
-   (let [req-str (str "http://localhost:9500/api/" word "/add-word")]
-    (print req-str)
+   (if (empty? word)
+     (js/alert "no word supplied")
+     (let [req-str (str "http://localhost:9500/api/" word "/add-word")]
      ;; we return a map of (side) effects
-   {:http-xhrio {:method          :get
-                 :uri             req-str
-                 :format          (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success      [:process-response]
-                 :on-failure      [:bad-response]}
-    :db  (assoc db :loading? true)})))
+       {:http-xhrio {:method          :get
+                     :uri             req-str
+                     :format          (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success      [:process-response]
+                     :on-failure      [:bad-response]}
+        :db  (assoc db :loading? true)}))))
    
 (rf/reg-event-db                   
   :process-response             
@@ -207,18 +146,20 @@
  (fn
    [db [_ response]]           ;; destructure the response from the event vector
    (print "in :bad-response")
-   ;(js/alert response)
    (let [form-resp (clojure.edn/read-string (get-in response [:original-text]))
-         fin-resp (get-in form-resp [:word-list])]
+         fin-resp (apply sorted-set (get-in form-resp [:word-list]))
+         score (reduce + (calc-points fin-resp))]
      (print form-resp)
      (print fin-resp)
+     (print (calc-points fin-resp))
+     (print (reduce + (calc-points fin-resp)))
    (-> db
         ;(assoc :loading? false) ;; take away that "Loading ..." UI 
        (assoc :the-word-list fin-resp)
-       (assoc :typed-word "")))))  ;; fairly lame processing
+       (assoc :typed-word "")
+       (assoc :point-score score)))))  ;; fairly lame processing
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
-
 
 (rf/reg-sub
  :time
@@ -240,38 +181,23 @@
  (fn [db _]
    (:the-word-list db)))
 
+(rf/reg-sub
+ :point-score
+ (fn [db _]
+   (:point-score db)))
+
+
 ;; -- Domino 5 - View Functions ----------------------------------------------
-
-#_(defonce typed-word (atom ""))
-#_(defonce the-word-list (atom []))
-
-
-(defn clock
-  []
-  [:div.example-clock
-   {:style {:color @(rf/subscribe [:time-color])}}
-   (-> @(rf/subscribe [:time])
-       .toTimeString
-       (str/split " ")
-       first)])
-
-(defn color-input
-  []
-  [:div.color-input
-   "Time color: "
-   [:input {:type "text"
-            :value @(rf/subscribe [:time-color])
-            :on-change #(rf/dispatch [:time-color-change (-> % .-target .-value)])}]])  ;; <---
-
-;; spelling bee------------------------
 
 (defn text-entry
   []
   [:div
-   [:h1 "Spelling Bee Game"]
+   [:center
+   [:h1#the-text "Spelling Bee Game"]
    [:input {:type :text :class :text
             :value @(rf/subscribe [:typed-word])
-            :on-change #(rf/dispatch [:typed-word-change (str/upper-case (-> % .-target .-value))])}]])
+            :on-change #(rf/dispatch [:typed-word-change (str/upper-case (-> % .-target .-value))])
+            :on-key-press #(if (= 13 (.-charCode %)) (rf/dispatch [:request-it @(rf/subscribe [:typed-word])]))}]]])
 
 (defn button-entry
   []
@@ -316,19 +242,28 @@
   []
   [:div ;{:class :column}
    [:center
-    [:h1 (str "You have found " (count (apply sorted-set @(rf/subscribe [:the-word-list]))) " words")]
+    [:h1#the-text (str "You have found " (count (apply sorted-set @(rf/subscribe [:the-word-list]))) " words")]
+    [:h2#the-text (str "Score: " @(rf/subscribe [:point-score]) " points!")]
     [:ul
-     [:li
+     [:li#list-text
       (for [item (apply sorted-set @(rf/subscribe [:the-word-list]))]
         ^{:key item} [:li item])]]]])
 
+(defn slider
+  []
+  [:div ;{:class "slidecontainer"}
+   [:center
+    [:input {:type :range :min "1" :max "100" :value @(rf/subscribe [:point-score]) :class "slider"}]]])
+
 (defn ui
   []
-  [:div
-   [:center
+  [:div {:class :row}
+   [:div {:class :columnl}
     [text-entry]
     [button-entry]
-    [action-buttons]
+    [action-buttons]]
+   [:div {:class :columnr}
+    [slider]
     [accrued-list]]])
 
 ;; Mount the UI

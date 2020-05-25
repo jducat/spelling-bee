@@ -111,5 +111,5 @@ goog.addDependency("../re_frame/std_interceptors.js", ['re_frame.std_interceptor
 goog.addDependency("../re_frame/subs.js", ['re_frame.subs'], ['re_frame.interop', 're_frame.trace', 're_frame.registrar', 'cljs.core', 're_frame.utils', 're_frame.loggers', 're_frame.db']);
 goog.addDependency("../re_frame/core.js", ['re_frame.core'], ['re_frame.interop', 're_frame.interceptor', 're_frame.events', 're_frame.fx', 're_frame.registrar', 'cljs.core', 're_frame.router', 'clojure.set', 're_frame.std_interceptors', 're_frame.loggers', 're_frame.subs', 're_frame.cofx', 're_frame.db']);
 goog.addDependency("../day8/re_frame/http_fx.js", ['day8.re_frame.http_fx'], ['ajax.core', 'goog.net.XhrIo', 'cljs.core', 'goog.net.ErrorCode', 're_frame.core']);
-goog.addDependency("../hello_world/core.js", ['hello_world.core'], ['ajax.core', 'cljs.core', 'cljs_http.client', 'cljs.core.async', 'clojure.edn', 'clojure.string', 're_frame.core', 'day8.re_frame.http_fx', 'reagent.dom']);
+goog.addDependency("../hello_world/core.js", ['hello_world.core'], ['ajax.core', 'cljs.core', 'cljs_http.client', 'clojure.edn', 'clojure.string', 're_frame.core', 'day8.re_frame.http_fx', 'reagent.dom']);
 goog.addDependency("../figwheel/main/generated/dev_auto_test_runner.js", ['figwheel.main.generated.dev_auto_test_runner'], ['cljs.core', 'figwheel.main.testing']);
