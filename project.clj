@@ -14,7 +14,9 @@
                  [cljs-http "0.1.46"]
                  [compojure "1.6.1"]
                  [ring/ring-defaults "0.3.2"]
-                 [hiccup "1.0.5"]]
+                 [hiccup "1.0.5"]
+                 [re-frame "0.12.0"]
+                 [day8.re-frame/http-fx "v0.2.0"]]
 
   :source-paths ["src"]
 

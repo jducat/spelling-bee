@@ -98,7 +98,7 @@
 
 (defn parse-word [word]
   ;; check if the word meets the requirements
-  (println word)
+  (println (str "in the server side parse word: " word))
   (if (empty? (filter #(= % word) correct-words))
     (add-word)
     (add-word word)))
