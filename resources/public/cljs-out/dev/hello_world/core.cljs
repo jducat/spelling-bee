@@ -1,13 +1,13 @@
 (ns ^:figwheel-hooks hello-world.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require
-   #_[cljs.core.async :refer [<! >! chan timeout]]
+   [cljs.core.async :refer [<! >! chan timeout]]
    [cljs-http.client :as http]
    [clojure.string :as str]
    [re-frame.core :as rf]
    [reagent.dom]
-   [day8.re-frame.http-fx]
-   [ajax.core :as ajax]
+   #_[day8.re-frame.http-fx]
+   #_[ajax.core :as ajax]
    [clojure.edn]))
 
 
@@ -22,7 +22,7 @@
 ;; which can sometimes be useful.
 (enable-console-print!)
 
-(def letter-list
+(defonce letter-list
   ["A"
    "D"
    "G"
@@ -30,6 +30,11 @@
    "N"
    "R"
    "U"])
+
+(defonce event-channel (chan 10))
+
+(defn send-event! [e]
+  (go (>! event-channel e)))
 
 (defn word-score
   [word]
@@ -50,14 +55,15 @@
 ;;Longer words earn 1 point per letter.
 ;;Each puzzle includes at least one “pangram” which uses every letter. These are worth 7 extra points!
 
-
-
-#_(def shuffle-list
-  (let [mid-letter (first letter-list)
-        bod (rest letter-list)]
-    (map into ([] mid-letter (first bod) (rest bod)))))
+(def shuffle-list
+  (let [mid-letter [(first letter-list)]
+        bod (shuffle (rest letter-list))]
+    (into mid-letter bod)))
 
 ;(js/alert shuffle-list)
+
+#_(def default-db           ;; what gets put into app-db by default.
+  {:shuffle-buttons letter-list})        ;; show all todos
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
@@ -71,23 +77,29 @@
     [in]
     (rf/dispatch [:fetch-words in]))
 
+#_(defn init-db
+  []
+  (rf/dispatch [:initialize "blank"]))
+
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
 (rf/reg-event-db              ;; sets up initial application state
  :initialize                 ;; usage:  (dispatch [:initialize])
  (fn [_ _]                   ;; the two parameters are not important here, so use _
-   {:time (js/Date.)         ;; What it returns becomes the new application state
-    :time-color "#f88"}))    ;; so the application state will initially be a map with two keys
+   {:button-letters letter-list
+    :typed-word ""
+    :the-word-list []
+    :point-score 0}         ;; What it returns becomes the new application state
+   ))    ;; so the application state will initially be a map with two keys
 
-
-(rf/reg-event-db                ;; usage:  (dispatch [:time-color-change 34562])
+#_(rf/reg-event-db                ;; usage:  (dispatch [:time-color-change 34562])
  :time-color-change            ;; dispatched when the user enters a new colour into the UI text field
  (fn [db [_ new-color-value]]  ;; -db event handlers given 2 parameters:  current application state and event (a vector)
    (assoc db :time-color new-color-value)))   ;; compute and return the new application state
 
 
-(rf/reg-event-db                 ;; usage:  (dispatch [:timer a-js-Date])
+#_(rf/reg-event-db                 ;; usage:  (dispatch [:timer a-js-Date])
  :timer                         ;; every second an event of this kind will be dispatched
  (fn [db [_ new-time]]          ;; note how the 2nd parameter is destructured to obtain the data value
    (assoc db :time new-time)))  ;; compute and return the new application state
@@ -119,7 +131,19 @@
  :request-it        ;; <-- the event id
  (fn                ;; <-- the handler function
    [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db 
-   (if (empty? word)
+   (go
+    (if (empty? word)
+      (js/alert (str "word supplied:" word))
+      (let [req-str (str "http://localhost:9500/api/" word "/add-word")
+            resp (<! (http/get req-str))]
+        (print (str req-str " ----  " resp))
+        (print word)
+
+      ;; Ignore error handling for the moment
+      (rf/dispatch [:fetch-words (get-in resp [:body :correct-word])]))))
+   (assoc db :typed-word word)))
+   
+   #_(if (empty? word)
      (js/alert "no word supplied")
      (let [req-str (str "http://localhost:9500/api/" word "/add-word")]
      ;; we return a map of (side) effects
@@ -129,9 +153,24 @@
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success      [:process-response]
                      :on-failure      [:bad-response]}
-        :db  (assoc db :loading? true)}))))
-   
-(rf/reg-event-db                   
+        :db  (assoc db :loading? true)}))
+
+(rf/reg-event-db
+ :fetch-words
+ (fn [db [_ word]]
+   (print "in :fetch-words")
+   (let [curr-word-list (:the-word-list db)
+         new-list (apply sorted-set (conj curr-word-list word))
+         score (reduce + (calc-points new-list))]
+     (print "correct word in :fetch " word)
+     (print "cur-word:" curr-word-list)
+     (print "all entered words" new-list)
+     (-> db
+         (assoc :the-word-list new-list)
+         (assoc :typed-word "")
+         (assoc :point-score score))))) 
+
+#_(rf/reg-event-db                   
   :process-response             
   (fn
     [db [_ response]]           ;; destructure the response from the event vector
@@ -141,7 +180,7 @@
         ;(assoc :loading? false) ;; take away that "Loading ..." UI 
         (assoc :the-word-list (get-in response [:body :word-list])))))  ;; fairly lame processing
  
-(rf/reg-event-db
+#_(rf/reg-event-db
  :bad-response
  (fn
    [db [_ response]]           ;; destructure the response from the event vector
@@ -159,14 +198,27 @@
        (assoc :typed-word "")
        (assoc :point-score score)))))  ;; fairly lame processing
 
+(rf/reg-event-db
+ :shuffle-buttons
+ (fn
+   [db [_ letter]]
+   (let [mid-letter [(first letter-list)]
+         bod (shuffle (rest letter-list))
+         output (into mid-letter bod)]
+     (print "shuffle output: " output ", letters" letter-list)
+     (-> db
+        ;(assoc :loading? false) ;; take away that "Loading ..." UI 
+         (assoc :button-letters output)))))
+
+
 ;; -- Domino 4 - Query  -------------------------------------------------------
 
-(rf/reg-sub
+#_(rf/reg-sub
  :time
  (fn [db _]     ;; db is current app state. 2nd unused param is query vector
    (:time db))) ;; return a query computation over the application state
 
-(rf/reg-sub
+#_(rf/reg-sub
  :time-color
  (fn [db _]
    (:time-color db)))
@@ -186,8 +238,15 @@
  (fn [db _]
    (:point-score db)))
 
+(rf/reg-sub
+ :button-letters
+ (fn [db _]
+   (:button-letters db)))
+
 
 ;; -- Domino 5 - View Functions ----------------------------------------------
+
+(defonce init (rf/dispatch [:initialize "blank"]))
 
 (defn text-entry
   []
@@ -204,25 +263,25 @@
   [:div
    [:div
     [:center
-     [:input {:type :button :class :button2 :value (nth letter-list 1)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 1)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]
-     [:input {:type :button :class :button2 :value (nth letter-list 2)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 2)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]]]
    [:div
     [:center
-     [:input {:type :button :class :button2 :value (nth letter-list 3)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 3)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]
       ;; The middle letter
      [:input {:type :button :class :button3 :value (first letter-list)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]
-     [:input {:type :button :class :button2 :value (nth letter-list 4)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 4)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]]]
    [:div
     [:center
 
-     [:input {:type :button :class :button2 :value (nth letter-list 5)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 5)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]
-     [:input {:type :button :class :button2 :value (nth letter-list 6)
+     [:input {:type :button :class :button2 :value (nth @(rf/subscribe [:button-letters]) 6)
               :on-click #(rf/dispatch [:add-letter (str/upper-case (-> % .-target .-value))])}]]]])
 
 (defn action-buttons
@@ -233,16 +292,17 @@
              :on-click #(rf/dispatch [:clear-input ""])}]
     [:input {:type :button :class :button4 :value "backspace"
              :on-click #(rf/dispatch [:rem-letter @(rf/subscribe [:typed-word])])}]
+    [:input {:type :button :class :button4 :value "Shuffle"
+             :on-click #(rf/dispatch [:shuffle-buttons @(rf/subscribe [:button-letters])])}]
     [:input {:type :button :class :button :value "enter"
              :on-click #(rf/dispatch [:request-it @(rf/subscribe [:typed-word])])
-             ;:on-click #(dispatch-event! {:type :fetch-words})
              }]]])
 
 (defn accrued-list
   []
   [:div ;{:class :column}
    [:center
-    [:h1#the-text (str "You have found " (count (apply sorted-set @(rf/subscribe [:the-word-list]))) " words")]
+    [:h1#the-text (str "You have found " (count (apply sorted-set  @(rf/subscribe [:the-word-list]))) " words")]
     [:h2#the-text (str "Score: " @(rf/subscribe [:point-score]) " points!")]
     [:ul
      [:li#list-text

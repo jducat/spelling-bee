@@ -4,7 +4,7 @@
    [compojure.route :as route]
    [hiccup.page :refer [html5 include-js include-css]]))
 
-(defonce word-list (atom []))
+(defonce word-list (atom #{}))
 (def correct-words
   ["GLANDULAR"
    "AGAR"
@@ -89,16 +89,20 @@
 (defn add-word
   ([]
    {:status 200
-    :body (pr-str {:word-list @word-list})
+    :body (pr-str {:correct-word []})
     :headers {"Content-Type" "application/edn"}})
   ([new-word]
+   ;(println (str "in the add word server side, word list:" @word-list))
+   ;(println (str "class word list:" (class @word-list)))
+   ;(let [word (vector new-word)]
    {:status 200
-    :body (pr-str {:word-list (swap! word-list conj new-word)})
+    :body (pr-str {:correct-word new-word})
     :headers {"Content-Type" "application/edn"}}))
 
 (defn parse-word [word]
   ;; check if the word meets the requirements
-  (println (str "in the server side parse word: " word))
+  ;(println (str "in the server side parse word: " word))
+  ;(println (str "class of word: " (class word)))
   (if (empty? (filter #(= % word) correct-words))
     (add-word)
     (add-word word)))
