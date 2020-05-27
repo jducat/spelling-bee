@@ -39,7 +39,7 @@ cursor: pointer;
 }
 
 .button3 {
-background-color: pink;
+background-color: yellow;
 border:1px solid green;
 border-radius: 8px;
 color: black;
@@ -67,6 +67,34 @@ cursor: pointer;
 border-radius: 8px;
 }
 
+.button5 {
+  background-color: pink;
+  border: 1px solid black;
+  color: black;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 100%;
+  margin: 2em;
+  cursor: pointer;
+  border-radius: 8px;
+  }
+
+.button6 {
+  background-color: grey;
+  border: 1px solid black;
+  color: white;
+  padding: 8px 16px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 90%;
+  margin: 2em;
+  cursor: pointer;
+  border-radius: 8px;
+  }
+
 #the-text {
 font-size: 150%;
 color: black;
@@ -86,6 +114,17 @@ color: black;
   text-align: left;
   }
 
+#inp-text {
+    font-size: 25px;
+    color: black;
+    text-align: center;
+    font-family: "Calibri";
+    background-color: pink;
+    border: 1px solid black;
+    width: 30%;
+    font-weight: 1000;
+    }
+
 .columnr {
   float: right;
   width: 30%;
@@ -94,6 +133,17 @@ color: black;
   float: left;
   width: 70%;
 }
+
+.column {
+  float: left;
+  width: 50%;
+}
+
+.columnt {
+  float: left;
+  width: 50%;
+}
+
 
 .row:after {
   content: "";
