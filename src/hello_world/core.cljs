@@ -28,7 +28,7 @@
 ;; Longer words earn 1 point per letter.
 ;; Each puzzle includes at least one “pangram” which uses every letter. These are worth 7 extra points!
 
-(defn word-score
+(defn calc-word-score
   [word]
   (let [count-word (count word)]
     (if (= count-word 4)
@@ -37,9 +37,9 @@
 
 (defn calc-points
   [word-list]
-  (map word-score word-list))
+  (map calc-word-score word-list))
 
-(defn change-game
+(defn inc-game-no
   "Hard coded to max of 3 games for now. I will update this to querry server for number of games."
   [game-no]
   (if (= 3 game-no)
@@ -257,7 +257,7 @@
    [:center
    [:div {:class :column}
     [:input {:type :button :class :button5 :value "New Game"
-             :on-click #(rf/dispatch [:request-letters (change-game @(rf/subscribe [:game-no]))])}]]
+             :on-click #(rf/dispatch [:request-letters (inc-game-no @(rf/subscribe [:game-no]))])}]]
    [:div {:class :column}
     [:h1#the-text (str "Game No:" @(rf/subscribe [:game-no]))]]]])
 
