@@ -1,0 +1,234 @@
+From 8e4df6c94e7f768f1002907227ce8f4059c112f5 Mon Sep 17 00:00:00 2001
+From: Alain Picard <Dr.Alain.Picard@gmail.com>
+Date: Thu, 28 May 2020 11:06:53 +1000
+Subject: [PATCH] First round of comments.
+
+---
+ src/hello_world/app_server.clj | 38 +++++++++++++++++++++-
+ src/hello_world/core.cljs      | 58 +++++++++++++++++++++++++++++++---
+ 2 files changed, 90 insertions(+), 6 deletions(-)
+
+diff --git a/src/hello_world/app_server.clj b/src/hello_world/app_server.clj
+index a5271f6..ebe0931 100644
+--- a/src/hello_world/app_server.clj
++++ b/src/hello_world/app_server.clj
+@@ -4,6 +4,15 @@
+    [compojure.route :as route]
+    [hiccup.page :refer [html5 include-js include-css]]))
+ 
++
++;; AP:
++;; Since these concepts only make sense together, I think it's better to
++;; wrap them together, e.g.
++
++(def games
++  {1 {:letters ["A" "D" "G" "L" "N" "R" "U"]
++      :words   ["GLANDULAR" "AGAR" "ALGA" "ALGAL"]}})  ; /etc.
++
+ (def letter-list ; First letter is the letter that must be used in all words.
+   {1 ["A" "D" "G" "L" "N" "R" "U"]
+    2 ["N" "A" "C" "D" "H" "I" "P"]
+@@ -27,6 +36,18 @@
+     [:div {:id "app"}]
+     (include-js "/cljs-out/dev-main.js")]))
+ 
++;; AP: This is an anti-pattern I see over and over and over again in
++;; the industry.  I very much dislike getting a status 200 for what is
++;; ostensibly an error; and here you're (I assume) going to interpret
++;; later on the empty correct word as meaning "your word was wrong".
++;; Do not do things "by convention" if there is a more explicit way.
++;; Here you could do one of 3 things, each of which would be better:
++;; 1) return 200 with body (pr-str {:invalid-word word))
++;; 2) return 204 with empty body (Status No Content, see HTTP codes at https://en.wikipedia.org/wiki/List_of_HTTP_status_codes#4xx_Client_errors)
++;; 3) return 404, arguably, though I think that's also ambiguous
++;; 4) return a game specific code: e.g. 422? Or a new 400 class number you make up,
++;;    like 499 "No such word"
++;; Then the client can just check status codes.  (I would probably opt for (2) above, personally.
+ (defn add-word
+   ([]
+    {:status 200
+@@ -37,11 +58,24 @@
+     :body (pr-str {:correct-word new-word})
+     :headers {"Content-Type" "application/edn"}}))
+ 
++;; AP: All of these conversions can be done
++;; automatically via the middleware, as we discussed
++;; in one of the lectures.
++
+ (defn convert-to-int [s]
+   (->> (re-seq #"\d" s)
+        (apply str)
+        (Integer.)))
+ 
++
++;; AP: parsing is a transformation, which turns one data form
++;; into another (e.g. a compiler parsing source text into intermediate
++;; representation, or compojure parsing the HTTP header lines into that map
++;; representation)  Here you're not doing this, and you're actually going to
++;; return an HTTP response!
++;; Perhaps this should really be called  check-word-handler ?
++;; Naming is important.  Old computer joke: There are only 2 hard
++;; problems in computer science; naming and cache invalidation.
+ (defn parse-word [word game-no]
+   ;; check if the word meets the requirements
+   (let [game-int (convert-to-int game-no)
+@@ -52,6 +86,8 @@
+ 
+ 
+ (defn request-letters
++  ;; AP: Why is this called GAME, when you've called it NAME in the handler below?
++  ;; I'm assuming this is really the :game-id (i.e. the key in those word maps above?
+   [game]
+   (let [game-int (convert-to-int game)
+         game-letters (letter-list game-int)]
+@@ -62,6 +98,6 @@
+ (defroutes handler
+   (GET "/" [] (index-html))
+   (GET "/api/:name/:number/check-word" [name number] (parse-word name number)) ;update this to include the game-no.
+-  (GET "/api//check-word" [] "<h1>Page not found</h1>")
++  (GET "/api//check-word" [] "<h1>Page not found</h1>") ; AP: this makes no sense?  Just omit?
+   (GET "/api/:name/letter-list" [name] (request-letters name))
+   (route/not-found "<h1>Page not found</h1>"))
+diff --git a/src/hello_world/core.cljs b/src/hello_world/core.cljs
+index d43b337..b78a3ea 100644
+--- a/src/hello_world/core.cljs
++++ b/src/hello_world/core.cljs
+@@ -8,6 +8,10 @@
+    [reagent.dom]
+    [clojure.edn]))
+ 
++;; AP: I noticed you checked in resources/public/cljs-out directory in your git
++;; repo.  These are "output files" which just add noise to diffs and make the
++;; repo hard to use.  You would typically ignore these in your .gitignore.
++;;
+ 
+ ;; -- Helper functions ------------------------------------------------
+ ;; This command will cause our printlns to also show up in the console's log,
+@@ -87,7 +91,18 @@
+ (rf/reg-event-fx        ;; <-- note the `-fx` extension
+  :check-word        ;; <-- the event id
+  (fn                ;; <-- the handler function
+-   [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db 
++   [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db
++   ;; AP:
++   ;; You are doing a side effect directly from your event handler.
++   ;; While I think this may work, it is not the recommended way to do this:
++   ;; re-frame wants you to return a DATA DESCRIPTION of the side effect you
++   ;; want to perform, then register effects handlers via reg-fx.
++   ;;
++   ;; Reread this section: https://day8.github.io/re-frame/Effects/#where-effects-come-from
++   ;; specially the paragraph under "Extensible Side Effects".
++   ;;
++   ;; In any case, I've written a solution which does this that I'll present
++   ;; tonight, so you'll get to see the "official" way of doing it soon.
+    (go
+     (if (empty? word)
+       (js/alert "No word supplied! Try again...")
+@@ -103,6 +118,9 @@
+  (fn [db [_ word]]
+    (if (empty? word)
+      (do
++       ;; AP: This, as I'm sure you know, is awful UI because it requires
++       ;; user to then go and click to dismiss the modal.  A pleasant popup
++       ;; is actually kinda hard to do; I've done a solution which I'll present.
+        (js/alert "Sorry, incorrect answer!")
+        (-> db
+            (assoc :typed-word "")))
+@@ -114,10 +132,14 @@
+            (assoc :typed-word "")
+            (assoc :point-score score))))))
+ 
++;; AP: Note that the point of using reg-event-fx instead of reg-event-db
++;; is to return coeffects, which you're not doing here.
++;; So this would be simpler as reg-event-db.
+ (rf/reg-event-fx               ;; <-- note the `-fx` extension
+  :request-letters              ;; <-- the event id
+  (fn                           ;; <-- the handler function
+-   [{db :db} [_ game-no]]      ;; <-- 1st argument is coeffect, from which we extract db 
++   [{db :db} [_ game-no]]      ;; <-- 1st argument is coeffect, from which we extract db
++   ;; AP: Same comment as above re: stateful event handlers.
+    (go
+      (let [req-str (str "http://localhost:9500/api/" game-no "/letter-list")
+            resp (<! (http/get req-str))
+@@ -133,12 +155,32 @@
+  (fn
+    [db [_ [letters game]]]
+    (-> db
++       ;; AP: You can assoc a whole bunch at a time: e.g.
++       ;; (assoc :foo 1 :bar 2 :blah 3 ...)
++       ;;
++       ;; But if this is trying to reset all game state,
++       ;; it might be simpler to make that explicit: e.g.
+        (assoc :button-letters letters) ;; reset all game state
+        (assoc :game-no game)
+        (assoc :typed-word "")
+        (assoc :the-word-list [])
+        (assoc :point-score 0))))
+ 
++(comment ; AP: Example simplification
++
++  (def empty-game
++    {:typed-word ""
++     :the-word-list []
++     :point-score 0})
++
++  (rf/reg-event-db
++      :process-letters
++      (fn [_ [_ [letters game-num]]]
++        (-> empty-game
++            (assoc :button-letters letters
++                   :game-no game-num)))))
++
++
+ (rf/reg-event-db
+  :shuffle-buttons
+  (fn
+@@ -146,6 +188,8 @@
+    (let [mid-letter [(first letter)]
+          bod (shuffle (rest letter))
+          output (into mid-letter bod)]
++     ;; AP: I guess I'm not thrilled that the special letter
++     ;; is the first letter by convention, but that's a nitpick.
+      (-> db
+          (assoc :button-letters output)))))
+ 
+@@ -192,7 +236,7 @@
+               :value @(rf/subscribe [:typed-word])
+               :on-change #(rf/dispatch [:typed-word-change (str/upper-case (-> % .-target .-value))])
+               :on-key-press #(if (= 13 (.-charCode %)) (rf/dispatch [:check-word @(rf/subscribe [:typed-word])]))}]
+-     ;[:div {:class :columnt}  
++     ;[:div {:class :columnt}
+      [:input {:type :button :class :button6 :value "Refresh"
+               :on-click #(rf/dispatch [:clear-input ""])}]]]])
+ 
+@@ -247,8 +291,9 @@
+ 
+ (defn slider
+   []
+-  [:div 
++  [:div
+    [:center
++    ;; AP:                              \/ this value is wrong, of course.
+     [:input {:type :range :min "1" :max "100" :value @(rf/subscribe [:point-score]) :class "slider"}]]])
+ 
+ (defn game-selection
+@@ -298,6 +343,9 @@
+   (mount-app-element))
+ 
+ 
++;; AP: You should always indent; I did a double-take, wondering
++;; why mount-app-element was being done both in the file and in
++;; the do form which follows until I noticed the strangely formatted comment.
+ (comment
+ (rf/dispatch-sync [:initialize])
+ (rf/dispatch-sync [:request-letters 1])
+@@ -314,4 +362,4 @@
+   []
+    (rf/dispatch-sync [:initialize]) ;; put a value into application state
+    (mount-app-element)            ;; mount the application's ui into '<div id="app" />'
+-  )
+\ No newline at end of file
++  )
+-- 
+2.20.1
+
