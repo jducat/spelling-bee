@@ -11,8 +11,9 @@ pom.xml
 .nrepl-port
 .cpcache/
 .rebel_readline_history
-.json
-.calva-repl
-.edn
-.js
-.js.map
+*.json
+*.calva-repl
+*.edn
+*.js
+*.js.map
+*.clj-kondo
