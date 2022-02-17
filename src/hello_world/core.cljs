@@ -8,6 +8,10 @@
    [reagent.dom]
    [clojure.edn]))
 
+;; AP: I noticed you checked in resources/public/cljs-out directory in your git
+;; repo.  These are "output files" which just add noise to diffs and make the
+;; repo hard to use.  You would typically ignore these in your .gitignore.
+;;
 
 ;; -- Helper functions ------------------------------------------------
 ;; This command will cause our printlns to also show up in the console's log,
@@ -87,7 +91,18 @@
 (rf/reg-event-fx        ;; <-- note the `-fx` extension
  :check-word        ;; <-- the event id
  (fn                ;; <-- the handler function
-   [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db 
+   [{db :db} [_ word]]     ;; <-- 1st argument is coeffect, from which we extract db
+   ;; AP:
+   ;; You are doing a side effect directly from your event handler.
+   ;; While I think this may work, it is not the recommended way to do this:
+   ;; re-frame wants you to return a DATA DESCRIPTION of the side effect you
+   ;; want to perform, then register effects handlers via reg-fx.
+   ;;
+   ;; Reread this section: https://day8.github.io/re-frame/Effects/#where-effects-come-from
+   ;; specially the paragraph under "Extensible Side Effects".
+   ;;
+   ;; In any case, I've written a solution which does this that I'll present
+   ;; tonight, so you'll get to see the "official" way of doing it soon.
    (go
     (if (empty? word)
       (js/alert "No word supplied! Try again...")
@@ -103,6 +118,9 @@
  (fn [db [_ word]]
    (if (empty? word)
      (do
+       ;; AP: This, as I'm sure you know, is awful UI because it requires
+       ;; user to then go and click to dismiss the modal.  A pleasant popup
+       ;; is actually kinda hard to do; I've done a solution which I'll present.
        (js/alert "Sorry, incorrect answer!")
        (-> db
            (assoc :typed-word "")))
@@ -114,10 +132,14 @@
            (assoc :typed-word "")
            (assoc :point-score score))))))
 
+;; AP: Note that the point of using reg-event-fx instead of reg-event-db
+;; is to return coeffects, which you're not doing here.
+;; So this would be simpler as reg-event-db.
 (rf/reg-event-fx               ;; <-- note the `-fx` extension
  :request-letters              ;; <-- the event id
  (fn                           ;; <-- the handler function
-   [{db :db} [_ game-no]]      ;; <-- 1st argument is coeffect, from which we extract db 
+   [{db :db} [_ game-no]]      ;; <-- 1st argument is coeffect, from which we extract db
+   ;; AP: Same comment as above re: stateful event handlers.
    (go
      (let [req-str (str "http://localhost:9500/api/" game-no "/letter-list")
            resp (<! (http/get req-str))
@@ -133,11 +155,31 @@
  (fn
    [db [_ [letters game]]]
    (-> db
+       ;; AP: You can assoc a whole bunch at a time: e.g.
+       ;; (assoc :foo 1 :bar 2 :blah 3 ...)
+       ;;
+       ;; But if this is trying to reset all game state,
+       ;; it might be simpler to make that explicit: e.g.
        (assoc :button-letters letters) ;; reset all game state
        (assoc :game-no game)
        (assoc :typed-word "")
        (assoc :the-word-list [])
        (assoc :point-score 0))))
+
+(comment ; AP: Example simplification
+
+  (def empty-game
+    {:typed-word ""
+     :the-word-list []
+     :point-score 0})
+
+  (rf/reg-event-db
+      :process-letters
+      (fn [_ [_ [letters game-num]]]
+        (-> empty-game
+            (assoc :button-letters letters
+                   :game-no game-num)))))
+
 
 (rf/reg-event-db
  :shuffle-buttons
@@ -146,6 +188,8 @@
    (let [mid-letter [(first letter)]
          bod (shuffle (rest letter))
          output (into mid-letter bod)]
+     ;; AP: I guess I'm not thrilled that the special letter
+     ;; is the first letter by convention, but that's a nitpick.
      (-> db
          (assoc :button-letters output)))))
 
@@ -192,7 +236,7 @@
               :value @(rf/subscribe [:typed-word])
               :on-change #(rf/dispatch [:typed-word-change (str/upper-case (-> % .-target .-value))])
               :on-key-press #(if (= 13 (.-charCode %)) (rf/dispatch [:check-word @(rf/subscribe [:typed-word])]))}]
-     ;[:div {:class :columnt}  
+     ;[:div {:class :columnt}
      [:input {:type :button :class :button6 :value "Refresh"
               :on-click #(rf/dispatch [:clear-input ""])}]]]])
 
@@ -247,8 +291,9 @@
 
 (defn slider
   []
-  [:div 
+  [:div
    [:center
+    ;; AP:                              \/ this value is wrong, of course.
     [:input {:type :range :min "1" :max "100" :value @(rf/subscribe [:point-score]) :class "slider"}]]])
 
 (defn game-selection
@@ -298,6 +343,9 @@
   (mount-app-element))
 
 
+;; AP: You should always indent; I did a double-take, wondering
+;; why mount-app-element was being done both in the file and in
+;; the do form which follows until I noticed the strangely formatted comment.
 (comment
 (rf/dispatch-sync [:initialize])
 (rf/dispatch-sync [:request-letters 1])
