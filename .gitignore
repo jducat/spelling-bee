@@ -15,3 +15,4 @@ pom.xml
 .calva-repl
 .edn
 .js
+.js.map
